@@ -1,11 +1,12 @@
 const express = require('express');
-const cors = require('cors');
 const fs = require('fs-extra');
 const app = express();
 const port = 8080;
 
-// Load cities data
+// Preload cities data
 let citiesData;
+
+// HELPER FUNCTIONS
 
 async function loadCitiesData() {
     citiesData = await fs.readJSON('./addresses.json');
@@ -20,6 +21,34 @@ const authenticateToken = (req, res, next) => {
     next();
 };
 
+// Calculate distance between two points using Haversine formula
+// https://stackoverflow.com/questions/14560999/using-the-haversine-formula-in-javascript
+function calculateDistance(lat1Deg, lon1Deg, lat2Deg, lon2Deg) {
+    function toRad(degree) {
+        return degree * Math.PI / 180;
+    }
+
+    const lat1 = toRad(lat1Deg);
+    const lon1 = toRad(lon1Deg);
+    const lat2 = toRad(lat2Deg);
+    const lon2 = toRad(lon2Deg);
+
+    const { sin, cos, sqrt, atan2 } = Math;
+
+    const R = 6371; // earth radius in km
+    const dLat = lat2 - lat1;
+    const dLon = lon2 - lon1;
+    const a = sin(dLat / 2) * sin(dLat / 2)
+            + cos(lat1) * cos(lat2)
+            * sin(dLon / 2) * sin(dLon / 2);
+    const c = 2 * atan2(sqrt(a), sqrt(1 - a));
+    const d = R * c; // distance in km
+    return Number(d.toFixed(2)); // added the toFixed function to round down to 2 decimals
+}
+
+
+// ENDPOINTS
+
 // Cities by tag endpoint
 app.get('/cities-by-tag', authenticateToken, (req, res) => {
     const { tag, isActive } = req.query;
@@ -29,6 +58,27 @@ app.get('/cities-by-tag', authenticateToken, (req, res) => {
         return tagMatch && activeMatch;
     });
     res.json({ cities: filteredCities });
+});
+
+// Distance calculation endpoint
+app.get('/distance', authenticateToken, (req, res) => {
+    const { from, to } = req.query;
+    const fromCity = citiesData.find(city => city.guid === from);
+    const toCity = citiesData.find(city => city.guid === to);
+
+    const distance = calculateDistance(
+        fromCity.latitude,
+        fromCity.longitude,
+        toCity.latitude,
+        toCity.longitude
+    );
+
+    res.json({
+        from: fromCity,
+        to: toCity,
+        unit: 'km',
+        distance
+    });
 });
 
 // Start server
