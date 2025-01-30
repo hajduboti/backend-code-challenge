@@ -9,6 +9,8 @@
   "author": "GAN Integrity",
   "license": "ISC",
   "dependencies": {
+    "cors": "^2.8.5",
+    "express": "^4.21.2",
     "fs-extra": "7.0.0",
     "node-fetch": "^2.6.1"
   }
