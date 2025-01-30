@@ -119,6 +119,13 @@ app.get('/area-result/:id', authenticateToken, (req, res) => {
     }
 });
 
+// All cities streaming endpoint
+app.get('/all-cities', authenticateToken, (req, res) => {
+    const readStream = fs.createReadStream('./addresses.json');
+    readStream.pipe(res);
+});
+
+
 // Start server
 async function startServer() {
     await loadCitiesData();
