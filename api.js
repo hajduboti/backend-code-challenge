@@ -6,6 +6,9 @@ const port = 8080;
 // Preload cities data
 let citiesData;
 
+// Store for area calculation results
+const areaResults = new Map();
+
 // HELPER FUNCTIONS
 
 async function loadCitiesData() {
@@ -79,6 +82,41 @@ app.get('/distance', authenticateToken, (req, res) => {
         unit: 'km',
         distance
     });
+});
+
+// Area calculation endpoint
+app.get('/area', authenticateToken, (req, res) => {
+    const { from, distance } = req.query;
+    const resultId = '2152f96f-50c7-4d76-9e18-f7033bd14428';
+
+    setTimeout(() => {
+        const fromCity = citiesData.find(city => city.guid === from);
+        const citiesInRange = citiesData.filter(city => {
+            if (city.guid === fromCity.guid) return false;
+            const dist = calculateDistance(
+                fromCity.latitude,
+                fromCity.longitude,
+                city.latitude,
+                city.longitude
+            );
+            return dist <= Number(distance);
+        });
+        areaResults.set(resultId, citiesInRange);
+    }, 1000);
+
+    res.status(202).json({
+        resultsUrl: `http://127.0.0.1:${port}/area-result/${resultId}`
+    });
+});
+
+// Area result polling endpoint
+app.get('/area-result/:id', authenticateToken, (req, res) => {
+    const result = areaResults.get(req.params.id);
+    if (!result) {
+        res.status(202).end();
+    } else {
+        res.json({ cities: result });
+    }
 });
 
 // Start server
